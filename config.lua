@@ -3,7 +3,7 @@
 Config = {}
 
 -- FRAMEWORK SETUP
-Config.framework = 'REDEMRP' -- OPTIONS: "VORP", "REDEMRP", "OTHER"
+Config.framework = 'VORP' -- OPTIONS: "VORP", "REDEMRP", "OTHER"
 Config.nativeText = false
 Config.timeDisplay = 5000
 Config.disableHorseAnimation = false
