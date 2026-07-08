@@ -1,10 +1,109 @@
 -- yourmaps_flagscript - Full Client Script
 
 DEFAULT_TYPE = nil
+CURRENT_ITEM = nil
 prop, propflag, propeagle = nil, nil, nil
 equipped, flagout = false, false
 local keylist = Config.keylist
 local prop_map = Config.prop_map
+local worldFlags = {}
+
+local function isHandHeldModel(model)
+    return model == 'mp001_p_mp_flag01x' or model == 's_mp_flag01x'
+end
+
+local function deleteEntity(obj)
+    if obj and DoesEntityExist(obj) then
+        DetachEntity(obj, true, true)
+        SetEntityAsMissionEntity(obj, true, true)
+        DeleteObject(obj)
+    end
+end
+
+local function clearEquippedFlag()
+    local ped = PlayerPedId()
+    ClearPedTasks(ped)
+    SetPedCanRagdoll(ped, true)
+    deleteEntity(prop)
+    deleteEntity(propflag)
+    deleteEntity(propeagle)
+    prop = nil
+    propflag = nil
+    propeagle = nil
+    equipped = false
+    flagout = false
+end
+
+local function spawnPlacedFlagWorld(data)
+    if not data or not data.id or worldFlags[data.id] then return end
+    local flagModel = prop_map[data.flag_type]
+    if not flagModel then return end
+
+    local x, y, z = data.x + 0.0, data.y + 0.0, data.z + 0.0
+    local heading = data.heading or 0.0
+
+    if isHandHeldModel(flagModel) then
+        local flag = CreateObject(GetHashKey(flagModel), x, y, z, false, true, true)
+        SetEntityHeading(flag, heading)
+        PlaceObjectOnGroundProperly(flag)
+        FreezeEntityPosition(flag, true)
+        worldFlags[data.id] = { pole = nil, flag = flag, eagle = nil, data = data }
+        if Config.persistentFlags and FlagInteractions then
+            FlagInteractions.onPlacedSpawn(data.id, GetEntityCoords(flag), data, function()
+                TriggerServerEvent('yourmaps_flags:server:pickup', data.id)
+            end)
+        end
+        return
+    end
+
+    local pole = CreateObject(GetHashKey('mp001_s_mp_campflagpole01x'), x, y, z, false, true, true)
+    local flag = CreateObject(GetHashKey(flagModel), x, y, z, false, true, true)
+    local eagle = CreateObject(GetHashKey('p_eaglependant01x'), x, y, z, false, true, true)
+    AttachEntityToEntity(flag, pole, 0, 0.0, 0.0, 2.9, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+    AttachEntityToEntity(eagle, pole, 0, 0.0, 0.01, 3.72, -75.0, 0.0, -192.0, true, true, false, true, 1, true)
+    SetEntityHeading(pole, heading)
+    PlaceObjectOnGroundProperly(pole)
+    FreezeEntityPosition(pole, true)
+    worldFlags[data.id] = { pole = pole, flag = flag, eagle = eagle, data = data }
+    if Config.persistentFlags and FlagInteractions then
+        local anchor = pole or flag
+        local c = GetEntityCoords(anchor)
+        FlagInteractions.onPlacedSpawn(data.id, c, data, function()
+            TriggerServerEvent('yourmaps_flags:server:pickup', data.id)
+        end)
+    end
+end
+
+local function despawnPlacedFlagWorld(flagId)
+    if FlagInteractions then
+        FlagInteractions.onPlacedDespawn(flagId)
+    end
+    local entry = worldFlags[flagId]
+    if not entry then return end
+    deleteEntity(entry.pole)
+    deleteEntity(entry.flag)
+    deleteEntity(entry.eagle)
+    worldFlags[flagId] = nil
+end
+
+local function nearestPlacedFlag(maxDist)
+    local ped = PlayerPedId()
+    local pcoords = GetEntityCoords(ped)
+    local bestId, bestDist, bestCoords = nil, maxDist or Config.persistentPickupDist, nil
+    for id, entry in pairs(worldFlags) do
+        local anchor = entry.pole or entry.flag
+        if anchor and DoesEntityExist(anchor) then
+            local coords = GetEntityCoords(anchor)
+            local dist = #(pcoords - coords)
+            if dist < bestDist then
+                bestDist = dist
+                bestId = id
+                bestCoords = coords
+            end
+        end
+    end
+    return bestId, bestDist, bestCoords
+end
 
 
 --- DRAWTEXT3D
@@ -55,11 +154,11 @@ CreateThread(function()
                 0xD7F7B5F5, -- 9
                 0xC3BADC72, ---f3
                 0x7A6E7C3D, ---f6
-                0x07CE1E61, -- Attack (botão esquerdo do mouse / RT)
-                0xB2F377E8, -- Melee (F ou R2)
-                0x63A38F2C, -- Melee alternativo (E)
-                0x91C9A817, -- Weapon wheel (roda de armas / ALT ou mouse scroll)
-                0xAC4BD4F1, -- TAB (seleção de armas)
+                0x07CE1E61, -- Attack (left mouse / RT)
+                0xB2F377E8, -- Melee (F or R2)
+                0x63A38F2C, -- Alternate melee (E)
+                0x91C9A817, -- Weapon wheel (ALT or scroll)
+                0xAC4BD4F1, -- TAB (weapon select)
             
             }
             for _, key in pairs(keysToBlock) do
@@ -129,11 +228,12 @@ end
 
 -- FLAG USE EVENT
 RegisterNetEvent('yourmaps_flags_UseFlag')
-AddEventHandler('yourmaps_flags_UseFlag', function(flagType)
+AddEventHandler('yourmaps_flags_UseFlag', function(flagType, itemName)
+    CURRENT_ITEM = itemName
     if equipped then
         TriggerEvent("yourmaps_flags:DelFlag")
     else
-        if flagout then
+        if flagout and not Config.persistentFlags then
             local text = Config.flagAlreadyDroppedText 
             if string.upper(Config.framework) == 'VORP' and not Config.nativeText then
                 TriggerEvent('vorp:TipBottom', text, Config.timeDisplay)
@@ -172,41 +272,7 @@ end)
 --- FLAG DELETE EVENT
 RegisterNetEvent('yourmaps_flags:DelFlag')
 AddEventHandler('yourmaps_flags:DelFlag', function()
-    local ped = PlayerPedId()
-    ClearPedTasks(ped)
-    SetPedCanRagdoll(ped, true)
-
-    local function tryDelete(obj)
-        if obj and DoesEntityExist(obj) then
-            DetachEntity(obj, true, true)
-            SetEntityAsMissionEntity(obj, true, true)
-            DeleteObject(obj)
-        end
-    end
-
-    tryDelete(prop)
-    tryDelete(propflag)
-    tryDelete(propeagle)
-
-    prop = nil
-    propflag = nil
-    propeagle = nil
-    equipped = false
-    flagout = false
-end)
-
-
-Citizen.CreateThread(function()
-    while true do
-        Wait(0)
-        if Config.useKeys and flagout then
-            if IsControlJustPressed(0, keylist[Config.deleteKey]) then
-                TriggerEvent('yourmaps_flags:DelFlag')
-            end
-        else
-            Wait(500)
-        end
-    end
+    clearEquippedFlag()
 end)
 
 -- FLAG DROP EVENT
@@ -226,6 +292,20 @@ AddEventHandler('yourmaps_flags:DropFlag', function()
         SetEntityRotation(prop, 0, 0, 0, false, true)
         SetEntityHeading(prop, GetEntityHeading(ped) + 90)
         FreezeEntityPosition(prop, true)
+
+        if Config.persistentFlags then
+            TriggerServerEvent('yourmaps_flags:server:place', {
+                flagType = DEFAULT_TYPE,
+                itemName = CURRENT_ITEM,
+                x = GetEntityCoords(prop).x,
+                y = GetEntityCoords(prop).y,
+                z = GetEntityCoords(prop).z,
+                heading = GetEntityHeading(prop),
+            })
+            clearEquippedFlag()
+            return
+        end
+
         equipped = false
 
         if Config.textOnDrop then
@@ -293,47 +373,60 @@ end
 
 CreateThread(function()
     while true do
-        Wait(1)
-
-        if Config.useKeys then
-            local ped = PlayerPedId()
-
-            if not keyCooldown and flagout and IsControlPressed(0, keylist[Config.pickupKey]) then
-                keyCooldown = true
-                if equipped then
-                    TriggerEvent('yourmaps_flags:DropFlag')
-                else
-                    TriggerEvent('yourmaps_flags:PickupFlag')
-                end
-                Wait(1500)
-                keyCooldown = false
-
-            elseif not keyCooldown and flagout and IsControlPressed(0, keylist[Config.deleteKey]) then
-                TriggerEvent('yourmaps_flags:DelFlag')
-                keyCooldown = true
-                Wait(2000)
-                keyCooldown = false
-            end
-        else
-            Wait(500)
-        end
+        Wait(150)
+        if not FlagInteractions then goto continue end
+        local nearId, nearDist, nearCoords = nearestPlacedFlag(Config.persistentDisplayDist)
+        FlagInteractions.state.equipped = equipped
+        FlagInteractions.state.flagout = flagout
+        FlagInteractions.state.persistent = Config.persistentFlags
+        FlagInteractions.state.prop = prop
+        FlagInteractions.state.nearestPlacedId = nearId
+        FlagInteractions.state.nearestPlacedDist = nearDist
+        FlagInteractions.state.nearestPlacedCoords = nearCoords
+        ::continue::
     end
 end)
 
-CreateThread(function()
-    while true do
-        Wait(1)
-        if Config.useKeys and flagout and not equipped and prop then
-            local ped = PlayerPedId()
-            local coords = GetEntityCoords(ped)
-            local flagcoords = GetEntityCoords(prop)
-            if #(coords - flagcoords) < Config.displayPickupDist then
-                DrawText3D(flagcoords, Config.pickupFlagPrompt, 0.35, 1)
-            end
-        else
-            Wait(1000)
-        end
+FlagInteractions.state.onDeploy = function()
+    TriggerEvent('yourmaps_flags:DropFlag')
+end
+FlagInteractions.state.onStash = function()
+    TriggerEvent('yourmaps_flags:DelFlag')
+end
+FlagInteractions.state.onPickupTemp = function()
+    TriggerEvent('yourmaps_flags:PickupFlag')
+end
+FlagInteractions.state.onPickupPlaced = function(flagId)
+    TriggerServerEvent('yourmaps_flags:server:pickup', flagId)
+end
+
+FlagInteractions.init()
+
+RegisterNetEvent('yourmaps_flags:client:syncPlaced')
+AddEventHandler('yourmaps_flags:client:syncPlaced', function(list)
+    for id, _ in pairs(worldFlags) do
+        despawnPlacedFlagWorld(id)
     end
+    if not list then return end
+    for _, row in ipairs(list) do
+        spawnPlacedFlagWorld(row)
+    end
+end)
+
+RegisterNetEvent('yourmaps_flags:client:spawnPlaced')
+AddEventHandler('yourmaps_flags:client:spawnPlaced', function(row)
+    spawnPlacedFlagWorld(row)
+end)
+
+RegisterNetEvent('yourmaps_flags:client:despawnPlaced')
+AddEventHandler('yourmaps_flags:client:despawnPlaced', function(flagId)
+    despawnPlacedFlagWorld(flagId)
+end)
+
+CreateThread(function()
+    if not Config.persistentFlags then return end
+    Wait(3000)
+    TriggerServerEvent('yourmaps_flags:server:requestSync')
 end)
 
 -- TEST COMMANDS -- REMOVE THEM FROM PLAYERS IF YOU WANT
