@@ -55,4 +55,16 @@ INSERT INTO items (`name`, `label`, `limit`, `can_remove`, `weight`, `usable`, `
 ('ambarinoflag', 'Ambarino Flag', 1, 1, 0.5, 1, 'Deploys Ambarino Flag'),
 ('newhanoverflag', 'New Hanover Flag', 1, 1, 0.5, 1, 'Deploys New Hanover Flag'),
 ('westelizabethflag', 'West Elizabeth Flag', 1, 1, 0.5, 1, 'Deploys West Elizabeth Flag'),
-('newaustinflag', 'New Austin Flag', 1, 1, 0.5, 1, 'Deploys New Austin Flag');
+('newaustinflag', 'New Austin Flag', 1, 1, 0.5, 1, 'Deploys New Austin Flag'),
+('flaggang01', 'Gang Flag 01', 1, 1, 0.5, 1, 'Deploys Gang Flag 01'),
+('flaggang02', 'Gang Flag 02', 1, 1, 0.5, 1, 'Deploys Gang Flag 02'),
+('flaggang03', 'Gang Flag 03', 1, 1, 0.5, 1, 'Deploys Gang Flag 03'),
+('flaggang04', 'Gang Flag 04', 1, 1, 0.5, 1, 'Deploys Gang Flag 04'),
+('flaggang05', 'Gang Flag 05', 1, 1, 0.5, 1, 'Deploys Gang Flag 05'),
+('flaggang06', 'Gang Flag 06', 1, 1, 0.5, 1, 'Deploys Gang Flag 06'),
+('flaggang07', 'Gang Flag 07', 1, 1, 0.5, 1, 'Deploys Gang Flag 07'),
+('flaggang08', 'Gang Flag 08', 1, 1, 0.5, 1, 'Deploys Gang Flag 08'),
+('flaggang09', 'Gang Flag 09', 1, 1, 0.5, 1, 'Deploys Gang Flag 09'),
+('flaggang10', 'Gang Flag 10', 1, 1, 0.5, 1, 'Deploys Gang Flag 10'),
+('flaggang11', 'Gang Flag 11', 1, 1, 0.5, 1, 'Deploys Gang Flag 11'),
+('flaggang12', 'Gang Flag 12', 1, 1, 0.5, 1, 'Deploys Gang Flag 12');

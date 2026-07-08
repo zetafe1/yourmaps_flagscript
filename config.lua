@@ -4,6 +4,9 @@ Config = {}
 
 -- FRAMEWORK SETUP
 Config.framework = 'VORP' -- OPTIONS: "VORP", "REDEMRP", "OTHER"
+Config.LocaleLanguage = 'en' -- 'en', 'fr', 'pt', 'es', 'it' (see lang.lua)
+-- Optional per-string overrides: Config.Locale = { pickup_flag_prompt = '[%s] Custom text' }
+Config.Locale = {}
 Config.nativeText = false
 Config.timeDisplay = 5000
 Config.disableHorseAnimation = false
@@ -17,12 +20,7 @@ Config.flagdelete = "flagdelete"
 Config.setDefaultType = "flagdefault"
 Config.defaultFlagType = "american"
 
--- CHAT SUGGESTIONS
-Config.flagdefaultdescription = 'Set default flag type.'
-Config.flagtakeouttdescription = 'Take out a flag.'
-Config.flagdropdescription = 'Dropped a flag.'
-Config.flagpickupdescription = 'Picked up a flag.'
-Config.flagdeletedescription = 'Put the flag away.'
+-- CHAT SUGGESTIONS (filled from lang.lua via ApplyFlagLocale)
 
 -- KEYBINDS
 Config.useKeys = true
@@ -33,18 +31,36 @@ Config.deleteKey = "BACKSPACE"
 Config.displayPickupDist = 2.0
 Config.maxPickupDist = 2.0
 
-Config.pickupFlagPrompt = '[' .. Config.pickupKey .. '] to pick up the flag'
-Config.deployFlagPrompt = '[' .. Config.dropKey .. '] to place the flag on the ground'
-Config.flagAlreadyDroppedText = "You have already placed a flag on the ground. Pick it up before deploying another."
+-- Player-facing strings are set in lang.lua (ApplyFlagLocale)
+
+-- INTERACTION (how the player interacts with flags)
+-- Ground / placed flag (pick up / persistent):
+--   'drawtext' | 'native' | 'murphy_interact' | 'blkb_interaction' | 'pc_interaction' | 'custom'
+Config.placedInteraction = 'drawtext'
+-- Equipped flag (place / stash):
+--   'keys' (pickupKey/deleteKey) | 'native' (RedM prompt) | 'drawtext'
+Config.equippedInteraction = 'keys'
+-- Resource for murphy_interact / blkb_interaction / pc_interaction
+Config.interactionResource = 'blkb_interaction'
+-- Native RedM prompt (NOT jo_libs) — control hash, e.g. G = 0x760A9C6F
+Config.nativePromptControl = 0x760A9C6F
+Config.nativePromptHoldMs = 0          -- 0 = press; >0 = hold (ms)
 
 -- TEXT DISPLAY
 Config.textOnUse = true
 Config.flagouttext = ''
 Config.textOnDrop = false
-Config.flagdroptext = 'Flag Dropped!'
 Config.textOnPickup = false
-Config.flagpickuptext = 'Flag Picked Up!'
-Config.flagfartext = 'The flag is too far away to be picked up!'
+
+-- PERSISTENT FLAGS (leave flags at camp / home)
+-- Requires oxmysql + run ym_flags_placed.sql
+Config.persistentFlags = true
+Config.persistentMaxPerPlayer = 15          -- max placed flags per character
+Config.persistentOwnerOnly = true           -- only owner can pick up placed flag
+Config.persistentConsumeOnPlace = true      -- remove item from inventory when placed
+Config.persistentReturnItemOnPickup = true  -- return item when picked up
+Config.persistentPickupDist = 2.5           -- distance to pick up placed flag
+Config.persistentDisplayDist = 8.0          -- distance to show 3D prompt / target
 
 -- JOB LOCKING
 Config.joblock = false
@@ -108,7 +124,19 @@ Config.items = {
 {name = 'unionflag', label = 'Union Flag', type = 'union', c = 1},
 {name = 'westelizabethflag', label = 'West Elizabeth State Flag', type = 'westelizabeth_1', c = 1},
 {name = 'whiteflag', label = 'White Flag', type = 'white', c = 1},
-{name = 'whitelongflag', label = 'White Flag Long', type = 'whitelongflag', c = 1}
+{name = 'whitelongflag', label = 'White Flag Long', type = 'whitelongflag', c = 1},
+{name = 'flaggang01', label = 'Gang Flag 01', type = 'gang01', c = 1},
+{name = 'flaggang02', label = 'Gang Flag 02', type = 'gang02', c = 1},
+{name = 'flaggang03', label = 'Gang Flag 03', type = 'gang03', c = 1},
+{name = 'flaggang04', label = 'Gang Flag 04', type = 'gang04', c = 1},
+{name = 'flaggang05', label = 'Gang Flag 05', type = 'gang05', c = 1},
+{name = 'flaggang06', label = 'Gang Flag 06', type = 'gang06', c = 1},
+{name = 'flaggang07', label = 'Gang Flag 07', type = 'gang07', c = 1},
+{name = 'flaggang08', label = 'Gang Flag 08', type = 'gang08', c = 1},
+{name = 'flaggang09', label = 'Gang Flag 09', type = 'gang09', c = 1},
+{name = 'flaggang10', label = 'Gang Flag 10', type = 'gang10', c = 1},
+{name = 'flaggang11', label = 'Gang Flag 11', type = 'gang11', c = 1},
+{name = 'flaggang12', label = 'Gang Flag 12', type = 'gang12', c = 1}
     
 }
 
@@ -164,11 +192,23 @@ Config.prop_map = {
     union = 'prop_flag_union',
     westelizabeth_1 = 'prop_flag_westelizabeth',
     white = 's_mp_flag01x',
-    whitelongflag = 'prop_flag_crew01x'
+    whitelongflag = 'prop_flag_crew01x',
+    gang01 = 'prop_flag_gang01',
+    gang02 = 'prop_flag_gang02',
+    gang03 = 'prop_flag_gang03',
+    gang04 = 'prop_flag_gang04',
+    gang05 = 'prop_flag_gang05',
+    gang06 = 'prop_flag_gang06',
+    gang07 = 'prop_flag_gang07',
+    gang08 = 'prop_flag_gang08',
+    gang09 = 'prop_flag_gang09',
+    gang10 = 'prop_flag_gang10',
+    gang11 = 'prop_flag_gang11',
+    gang12 = 'prop_flag_gang12'
 }
 
 
--- Lista de Teclas
+-- Key hash list
 Config.keylist = {
     ["A"] = 0x7065027D, ["B"] = 0x4CC0E2FE, ["C"] = 0x9959A6F0, ["D"] = 0x9959A6F0, ["E"] = 0xCEFD9220,
     ["F"] = 0xA8E3F467, ["G"] = 0x760A9C6F, ["H"] = 0x24978A28, ["I"] = 0xC1989F95, ["J"] = 0xF3830D8E,

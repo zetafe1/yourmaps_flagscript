@@ -53,6 +53,22 @@ Installation
 
 Put the folder yourmaps_flags inside your RedM resources directory.
 
+    Persistent flags (optional):
+
+Execute `ym_flags_placed.sql` in your database. Requires `oxmysql`.
+Set `Config.persistentFlags = true` in config.lua — placed flags survive restarts.
+
+    Interaction modes (`config.lua`):
+
+- `Config.placedInteraction` — ground flags: `drawtext`, `native` (RedM prompt, not jo_libs), `murphy_interact`, `blkb_interaction`, `pc_interaction`, `custom`
+- `Config.equippedInteraction` — while holding: `keys`, `native`, `drawtext`
+- See `client/interactions_custom.example.lua` for custom target integration
+
+    Language (`config.lua` + `lang.lua`):
+
+- `Config.LocaleLanguage = 'en'` — supported: `en`, `fr`, `pt`, `es`, `it`
+- Override any string: `Config.Locale['persistent_place'] = 'Custom text'`
+
     Start the script:
 
 Add this line to your server.cfg:
