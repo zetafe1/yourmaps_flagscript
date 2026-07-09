@@ -56,17 +56,13 @@ local function getLicense(src)
     return nil
 end
 
-local function notify(src, text)
-    if fw() == "REDEMRP" and Config.nativeText == false then
-        TriggerClientEvent("redem_roleplay:Tip", src, text, Config.timeDisplay)
-    else
-        TriggerClientEvent("yourmaps_flags:TextTip", src, text, Config.timeDisplay)
-    end
+local function notify(src, text, kind)
+    FlagNotifyPlayer(src, text, kind or 'info')
 end
 
 local function placeFailed(src)
     TriggerClientEvent("yourmaps_flags:client:placeFailed", src)
-    notify(src, Config.persistentPlaceFailText)
+    notify(src, Config.persistentPlaceFailText, 'error')
 end
 
 local function itemForType(flagType)
@@ -179,7 +175,7 @@ RegisterNetEvent("yourmaps_flags:server:place", function(data)
     countForChar(charId, function(count)
         if count >= (Config.persistentMaxPerPlayer or 15) then
             placeFailed(src)
-            notify(src, Config.persistentMaxText)
+            notify(src, Config.persistentMaxText, 'warn')
             return
         end
 
@@ -226,7 +222,7 @@ RegisterNetEvent("yourmaps_flags:server:place", function(data)
                 }
                 placedFlags[insertId] = row
                 broadcastSpawn(row)
-                notify(src, Config.persistentPlaceText)
+                notify(src, Config.persistentPlaceText, 'success')
             end
         )
     end)
@@ -242,7 +238,7 @@ RegisterNetEvent("yourmaps_flags:server:pickup", function(flagId)
 
     local charId = getCharId(src)
     if Config.persistentOwnerOnly and charId ~= tostring(row.char_id) then
-        notify(src, Config.persistentNotOwnerText)
+        notify(src, Config.persistentNotOwnerText, 'error')
         return
     end
 
@@ -254,6 +250,6 @@ RegisterNetEvent("yourmaps_flags:server:pickup", function(flagId)
             addItem(src, row.item_name)
         end
         broadcastDespawn(flagId)
-        notify(src, Config.persistentPickupText)
+        notify(src, Config.persistentPickupText, 'success')
     end)
 end)

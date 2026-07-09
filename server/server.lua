@@ -57,12 +57,8 @@ CreateThread(function()
 end)
 
 -- Display text (both frameworks)
-local function displayUserText(text, source)
-    if fw() == "REDEMRP" and Config.nativeText == false then
-        TriggerClientEvent("redem_roleplay:Tip", source, text, Config.timeDisplay)
-    else
-        TriggerClientEvent("yourmaps_flags:TextTip", source, text, Config.timeDisplay)
-    end
+local function displayUserText(text, source, kind)
+    FlagNotifyPlayer(source, text, kind or 'info')
 end
 
 -- Register usable items
@@ -76,9 +72,6 @@ CreateThread(function()
             RegisterServerEvent("RegisterUsableItem:" .. item.name)
             AddEventHandler("RegisterUsableItem:" .. item.name, function(source)
                 local type_ = item.type or Config.defaultFlagType
-                if Config.textOnUse then
-                    displayUserText(Config.useKeys and (Config.flagouttext .. " " .. Config.deployFlagPrompt) or Config.flagouttext, source)
-                end
                 TriggerClientEvent("yourmaps_flags_UseFlag", source, type_, item.name)
             end)
             if Config.debug then
@@ -115,9 +108,6 @@ CreateThread(function()
 
                 if hasItem and jobOK then
                     local type_ = item.type or Config.defaultFlagType
-                    if Config.textOnUse then
-                        displayUserText(Config.useKeys and (Config.flagouttext .. " " .. Config.deployFlagPrompt) or Config.flagouttext, src)
-                    end
                     TriggerClientEvent("yourmaps_flags_UseFlag", src, type_, item.name)
                 elseif Config.debug then
                     print(("[yourmaps_flags][VORP] use FAIL item=%s hasItem=%s jobOK=%s"):format(item.name, tostring(hasItem), tostring(jobOK)))
