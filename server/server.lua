@@ -10,6 +10,18 @@ local function fw()
     return string.upper(Config.framework or "OTHER")
 end
 
+local function resolveCharacter(user)
+    if not user or not user.getUsedCharacter then return nil end
+    local used = user.getUsedCharacter
+    if type(used) == "function" then
+        return used()
+    end
+    if type(used) == "table" then
+        return used
+    end
+    return nil
+end
+
 -- Setup framework APIs
 CreateThread(function()
     -- wait for framework to start
@@ -90,7 +102,7 @@ CreateThread(function()
                 local jobOK = true
                 if Config.joblock then
                     local User = VorpCore and VorpCore.getUser and VorpCore.getUser(src)
-                    local Character = User and (User.getUsedCharacter and User.getUsedCharacter() or User.getUsedCharacter) or nil
+                    local Character = User and resolveCharacter(User) or nil
                     local charJob = Character and (Character.job or Character.jobName or Character.Job or Character.job and Character.job.name) or nil
                     jobOK = false
                     for _, j in ipairs(Config.jobs or {}) do

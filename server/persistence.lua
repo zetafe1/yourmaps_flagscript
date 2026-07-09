@@ -10,18 +10,30 @@ local function fw()
     return string.upper(Config.framework or "OTHER")
 end
 
+local function resolveCharacter(user)
+    if not user or not user.getUsedCharacter then return nil end
+    local used = user.getUsedCharacter
+    if type(used) == "function" then
+        return used()
+    end
+    if type(used) == "table" then
+        return used
+    end
+    return nil
+end
+
 local function getCharId(src)
     if fw() == "VORP" and VorpCore then
         local User = VorpCore.getUser(src)
         if not User then return nil end
-        local Character = User.getUsedCharacter and User.getUsedCharacter() or User.getUsedCharacter
+        local Character = resolveCharacter(User)
         if Character and Character.charIdentifier then
             return tostring(Character.charIdentifier)
         end
     elseif fw() == "REDEMRP" and VorpCore then
         local User = VorpCore.getUser(src)
         if User then
-            local Character = User.getUsedCharacter and User.getUsedCharacter() or User.getUsedCharacter
+            local Character = resolveCharacter(User)
             if Character and (Character.charid or Character.charIdentifier) then
                 return tostring(Character.charid or Character.charIdentifier)
             end
@@ -50,6 +62,11 @@ local function notify(src, text)
     else
         TriggerClientEvent("yourmaps_flags:TextTip", src, text, Config.timeDisplay)
     end
+end
+
+local function placeFailed(src)
+    TriggerClientEvent("yourmaps_flags:client:placeFailed", src)
+    notify(src, Config.persistentPlaceFailText)
 end
 
 local function itemForType(flagType)
@@ -155,18 +172,19 @@ RegisterNetEvent("yourmaps_flags:server:place", function(data)
 
     local charId = getCharId(src)
     if not charId then
-        notify(src, Config.persistentPlaceFailText)
+        placeFailed(src)
         return
     end
 
     countForChar(charId, function(count)
         if count >= (Config.persistentMaxPerPlayer or 15) then
+            placeFailed(src)
             notify(src, Config.persistentMaxText)
             return
         end
 
         if Config.persistentConsumeOnPlace and not removeItem(src, itemName) then
-            notify(src, Config.persistentPlaceFailText)
+            placeFailed(src)
             return
         end
 
@@ -184,11 +202,14 @@ RegisterNetEvent("yourmaps_flags:server:place", function(data)
                 tonumber(data.heading) or 0.0,
             },
             function(insertId)
-                if not insertId then
+                if not insertId or insertId == 0 then
                     if Config.persistentConsumeOnPlace then
                         addItem(src, itemName)
                     end
-                    notify(src, Config.persistentPlaceFailText)
+                    if Config.debug then
+                        print("[yourmaps_flags] INSERT failed — did you run ym_flags_placed.sql?")
+                    end
+                    placeFailed(src)
                     return
                 end
 
