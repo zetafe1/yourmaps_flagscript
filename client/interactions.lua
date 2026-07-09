@@ -271,6 +271,7 @@ M.state = {
     nearestPlacedId = nil,
     nearestPlacedCoords = nil,
     nearestPlacedDist = nil,
+    placementActive = false,
     onDeploy = nil,
     onStash = nil,
     onPickupTemp = nil,
@@ -285,8 +286,11 @@ function M.init(mainThread)
             local equipped = s.equipped
             local flagout = s.flagout
 
+            if s.placementActive then
+                hideAllNativePrompts()
+                Wait(0)
             -- === Equipped: native prompts (only place + stash) ===
-            if M.usesNativeEquipped() and equipped and flagout then
+            elseif M.usesNativeEquipped() and equipped and flagout then
                 showNativePrompts({ 'deploy', 'stash' }, Config.nativeEquippedTitle or 'Flag')
                 if nativeCompleted('deploy') then
                     if s.onDeploy then s.onDeploy() end
@@ -297,7 +301,7 @@ function M.init(mainThread)
                 end
 
             -- === Equipped: keys ===
-            elseif M.usesKeysEquipped() and flagout and equipped then
+            elseif M.usesKeysEquipped() and flagout and equipped and not s.placementActive then
                 if not keyCooldown and IsControlPressed(0, M.controlForKey(Config.pickupKey or 'G')) then
                     keyCooldown = true
                     if s.onDeploy then s.onDeploy() end
@@ -371,7 +375,7 @@ function M.init(mainThread)
             while true do
                 Wait(1)
                 local s = M.state
-                if M.usesDrawTextEquipped() and s.equipped and s.flagout then
+                if M.usesDrawTextEquipped() and s.equipped and s.flagout and not s.placementActive then
                     local ped = PlayerPedId()
                     local c = GetEntityCoords(ped)
                     DrawText3D(vector3(c.x, c.y, c.z + 1.0), Config.deployFlagPrompt, 0.35, 1)

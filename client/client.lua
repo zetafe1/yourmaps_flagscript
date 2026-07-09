@@ -53,16 +53,133 @@ local function ensurePoleAssembly(pole, flag, eagle)
     end
 end
 
-local function placePoleOnGround(pole, ped)
-    local coords = GetEntityCoords(ped)
-    local forward = GetEntityForwardVector(ped)
-    DetachEntity(pole, true, true)
-    SetEntityCoords(pole, coords.x + forward.x, coords.y + forward.y, coords.z - 1.0, false, false, false, false)
-    PlaceObjectOnGroundProperly(pole)
-    SetEntityRotation(pole, 0, 0, 0, false, true)
-    SetEntityHeading(pole, GetEntityHeading(ped) + 90)
-    ensurePoleAssembly(pole, propflag, propeagle)
-    FreezeEntityPosition(pole, true)
+local function reattachEquippedFlag()
+    local ped = PlayerPedId()
+    local anchor = prop or propflag
+    if not anchor or not DoesEntityExist(anchor) then return end
+
+    if prop then
+        local boneIndexRightHand = GetPedBoneIndex(ped, 11316)
+        AttachEntityToEntity(prop, ped, boneIndexRightHand, 0.0, -0.03, 0.5, 0.5, 180.0, 0.0, true, true, false, true, 1, true)
+        ensurePoleAssembly(prop, propflag, propeagle)
+    elseif propflag then
+        local boneIndexRightHand = GetPedBoneIndex(ped, 11316)
+        AttachEntityToEntity(propflag, ped, boneIndexRightHand, 0.0, -0.03, 0.4, 0.5, 180.0, 0.0, true, true, false, true, 1, true)
+    end
+
+    SetPedCanRagdoll(ped, false)
+    RequestAnimDict("script_re@rally@hostage")
+    while not HasAnimDictLoaded("script_re@rally@hostage") do Wait(0) end
+    TaskPlayAnim(ped, "script_re@rally@hostage", "base_rallymale03", 2.0, -2.0, -1, 67109393, 0.0, false, 1245184, false, "UpperbodyFixup_filter", false)
+    equipped = true
+    flagout = true
+end
+
+local function finalizeFlagPlacement(placedCoords, placedHeading, opts)
+    opts = opts or {}
+    local ped = PlayerPedId()
+    ClearPedTasks(ped)
+    SetPedCanRagdoll(ped, true)
+
+    local anchor = prop or propflag
+    if not anchor then return end
+
+    local offsetZ = tonumber(Config.placementGroundOffsetZ) or 0.0
+    local px = placedCoords.x
+    local py = placedCoords.y
+    local pz = placedCoords.z
+    if not opts.skipGroundSnap then
+        pz = pz + offsetZ
+    end
+    local fullRot = opts.rotation
+
+    if prop and DoesEntityExist(prop) then
+        DetachEntity(prop, true, true)
+        SetEntityCoords(prop, px, py, pz, false, false, false, false)
+        if fullRot then
+            SetEntityRotation(prop, fullRot.x, fullRot.y, fullRot.z, 2, false)
+        else
+            SetEntityHeading(prop, placedHeading)
+        end
+        if not opts.skipGroundSnap then
+            PlaceObjectOnGroundProperly(prop)
+        end
+        ensurePoleAssembly(prop, propflag, propeagle)
+        FreezeEntityPosition(prop, true)
+    elseif propflag and DoesEntityExist(propflag) then
+        DetachEntity(propflag, true, true)
+        SetEntityCoords(propflag, px, py, pz, false, false, false, false)
+        if fullRot then
+            SetEntityRotation(propflag, fullRot.x, fullRot.y, fullRot.z, 2, false)
+        else
+            SetEntityHeading(propflag, placedHeading)
+        end
+        if not opts.skipGroundSnap then
+            PlaceObjectOnGroundProperly(propflag)
+        end
+        FreezeEntityPosition(propflag, true)
+    end
+
+    placedCoords = GetEntityCoords(anchor)
+    placedHeading = GetEntityHeading(anchor)
+
+    if Config.persistentFlags then
+        pendingPlace = {
+            pole = prop,
+            flag = propflag,
+            eagle = propeagle,
+            x = placedCoords.x,
+            y = placedCoords.y,
+            z = placedCoords.z,
+            heading = placedHeading,
+        }
+
+        TriggerServerEvent('yourmaps_flags:server:place', {
+            flagType = DEFAULT_TYPE,
+            itemName = CURRENT_ITEM,
+            x = placedCoords.x,
+            y = placedCoords.y,
+            z = placedCoords.z,
+            heading = placedHeading,
+        })
+
+        prop = nil
+        propflag = nil
+        propeagle = nil
+        equipped = false
+        flagout = true
+        return
+    end
+
+    equipped = false
+
+    if Config.textOnDrop then
+        FlagShowMessage(Config.flagdroptext)
+    end
+end
+
+local function beginFlagPlacement()
+    if not equipped or FlagPlacement.isActive() then return end
+    local anchor = prop or propflag
+    if not anchor or not DoesEntityExist(anchor) then return end
+
+    if Config.placementMode == false then
+        TriggerEvent('yourmaps_flags:DropFlag')
+        return
+    end
+
+    FlagPlacement.start({
+        pole = prop,
+        flag = propflag,
+        eagle = propeagle,
+        onConfirm = function(coords, heading, opts)
+            finalizeFlagPlacement(coords, heading, opts)
+        end,
+        onCancel = function()
+            FlagShowMessage(Config.placementCancelledText)
+            reattachEquippedFlag()
+        end,
+    })
 end
 
 local function clearEquippedFlag()
@@ -114,12 +231,13 @@ local function spawnPlacedFlagWorld(data)
 
     local x, y, z = data.x + 0.0, data.y + 0.0, data.z + 0.0
     local heading = data.heading or 0.0
+    local offsetZ = tonumber(Config.placementGroundOffsetZ) or 0.0
+    z = z + offsetZ
 
     if isHandHeldModel(flagModel) then
         if not loadModel(flagModel) then return end
         local flag = CreateObject(GetHashKey(flagModel), x, y, z, false, true, true)
         SetEntityHeading(flag, heading)
-        PlaceObjectOnGroundProperly(flag)
         FreezeEntityPosition(flag, true)
         worldFlags[data.id] = { pole = nil, flag = flag, eagle = nil, data = data }
         if Config.persistentFlags and FlagInteractions then
@@ -142,8 +260,8 @@ local function spawnPlacedFlagWorld(data)
     local eagle = CreateObject(GetHashKey('p_eaglependant01x'), x, y, z, false, true, true)
     AttachEntityToEntity(flag, pole, 0, 0.0, 0.0, 2.9, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
     AttachEntityToEntity(eagle, pole, 0, 0.0, 0.01, 3.72, -75.0, 0.0, -192.0, true, true, false, true, 1, true)
+    SetEntityCoords(pole, x, y, z, false, false, false, false)
     SetEntityHeading(pole, heading)
-    PlaceObjectOnGroundProperly(pole)
     FreezeEntityPosition(pole, true)
     worldFlags[data.id] = { pole = pole, flag = flag, eagle = eagle, data = data }
     if Config.persistentFlags and FlagInteractions then
@@ -316,13 +434,7 @@ AddEventHandler('yourmaps_flags_UseFlag', function(flagType, itemName)
     else
         if flagout and not Config.persistentFlags then
             local text = Config.flagAlreadyDroppedText 
-            if string.upper(Config.framework) == 'VORP' and not Config.nativeText then
-                TriggerEvent('vorp:TipBottom', text, Config.timeDisplay)
-            elseif string.upper(Config.framework) == 'REDEMRP' and not Config.nativeText then
-                TriggerEvent('redem_roleplay:Tip', text, Config.timeDisplay)
-            else
-                displayText(text, Config.timeDisplay)
-            end
+            FlagShowMessage(text)
             return
         end
 
@@ -333,16 +445,14 @@ AddEventHandler('yourmaps_flags_UseFlag', function(flagType, itemName)
             DEFAULT_TYPE = flagType
 
             if Config.textOnUse then
-                local text = Config.flagouttext
-                if Config.useKeys then
-                    text = text .. " " .. Config.deployFlagPrompt
+                local text = Config.flagouttext or ''
+                local showDeployHint = Config.useKeys
+                    and not (FlagInteractions and FlagInteractions.usesNativeEquipped and FlagInteractions.usesNativeEquipped())
+                if showDeployHint then
+                    text = (text ~= '' and (text .. ' ') or '') .. Config.deployFlagPrompt
                 end
-                if string.upper(Config.framework) == 'VORP' and not Config.nativeText then
-                    TriggerEvent('vorp:TipBottom', text, Config.timeDisplay)
-                elseif string.upper(Config.framework) == 'REDEMRP' and not Config.nativeText then
-                    TriggerEvent('redem_roleplay:Tip', text, Config.timeDisplay)
-                else
-                    displayText(text, Config.timeDisplay)
+                if text ~= '' then
+                    FlagShowMessage(text)
                 end
             end
         end
@@ -356,73 +466,22 @@ AddEventHandler('yourmaps_flags:DelFlag', function()
     clearEquippedFlag()
 end)
 
--- FLAG DROP EVENT
+-- FLAG DROP EVENT (colocação instantânea — usado se Config.placementMode = false)
 RegisterNetEvent('yourmaps_flags:DropFlag')
 AddEventHandler('yourmaps_flags:DropFlag', function()
+    if not equipped or FlagPlacement.isActive() then return end
     local ped = PlayerPedId()
-    ClearPedTasks(ped)
-    SetPedCanRagdoll(ped, true)
-
     local anchor = prop or propflag
-    if anchor and equipped then
-        local coords = GetEntityCoords(ped)
-        local forward = GetEntityForwardVector(ped)
+    if not anchor then return end
 
-        if prop then
-            placePoleOnGround(prop, ped)
-        else
-            DetachEntity(propflag, true, true)
-            SetEntityCoords(propflag, coords.x + forward.x, coords.y + forward.y, coords.z - 1.0, false, false, false, false)
-            PlaceObjectOnGroundProperly(propflag)
-            SetEntityHeading(propflag, GetEntityHeading(ped) + 90)
-            FreezeEntityPosition(propflag, true)
-        end
-
-        local placedCoords = GetEntityCoords(anchor)
-        local placedHeading = GetEntityHeading(anchor)
-
-        if Config.persistentFlags then
-            pendingPlace = {
-                pole = prop,
-                flag = propflag,
-                eagle = propeagle,
-                x = placedCoords.x,
-                y = placedCoords.y,
-                z = placedCoords.z,
-                heading = placedHeading,
-            }
-
-            TriggerServerEvent('yourmaps_flags:server:place', {
-                flagType = DEFAULT_TYPE,
-                itemName = CURRENT_ITEM,
-                x = placedCoords.x,
-                y = placedCoords.y,
-                z = placedCoords.z,
-                heading = placedHeading,
-            })
-
-            prop = nil
-            propflag = nil
-            propeagle = nil
-            equipped = false
-            flagout = true
-            return
-        end
-
-        equipped = false
-
-        if Config.textOnDrop then
-            local text = Config.flagdroptext
-            if string.upper(Config.framework) == 'VORP' and not Config.nativeText then
-                TriggerEvent('vorp:TipBottom', text, Config.timeDisplay)
-            elseif string.upper(Config.framework) == 'REDEMRP' and not Config.nativeText then
-                TriggerEvent('redem_roleplay:Tip', text, Config.timeDisplay)
-            else
-                displayText(text, Config.timeDisplay)
-            end
-        end
-    end
+    local coords = GetEntityCoords(ped)
+    local forward = GetEntityForwardVector(ped)
+    local target = vector3(coords.x + forward.x * 1.5, coords.y + forward.y * 1.5, coords.z - 1.0)
+    finalizeFlagPlacement(target, GetEntityHeading(ped) + 90)
 end)
+
+RegisterNetEvent('yourmaps_flags:StartPlacement')
+AddEventHandler('yourmaps_flags:StartPlacement', beginFlagPlacement)
 
 -- FLAG PICKUP EVENT
 RegisterNetEvent('yourmaps_flags:PickupFlag')
@@ -440,23 +499,11 @@ AddEventHandler('yourmaps_flags:PickupFlag', function()
 
             if Config.textOnPickup then
                 local text = Config.flagpickuptext
-                if string.upper(Config.framework) == 'VORP' and not Config.nativeText then
-                    TriggerEvent('vorp:TipBottom', text, Config.timeDisplay)
-                elseif string.upper(Config.framework) == 'REDEMRP' and not Config.nativeText then
-                    TriggerEvent('redem_roleplay:Tip', text, Config.timeDisplay)
-                else
-                    displayText(text, Config.timeDisplay)
-                end
+                FlagShowMessage(text, nil, 'success')
             end
         else
             local text = Config.flagfartext
-            if string.upper(Config.framework) == 'VORP' and not Config.nativeText then
-                TriggerEvent('vorp:TipBottom', text, Config.timeDisplay)
-            elseif string.upper(Config.framework) == 'REDEMRP' and not Config.nativeText then
-                TriggerEvent('redem_roleplay:Tip', text, Config.timeDisplay)
-            else
-                displayText(text, Config.timeDisplay)
-            end
+            FlagShowMessage(text)
         end
     end
 end)
@@ -492,7 +539,7 @@ CreateThread(function()
 end)
 
 FlagInteractions.state.onDeploy = function()
-    TriggerEvent('yourmaps_flags:DropFlag')
+    TriggerEvent('yourmaps_flags:StartPlacement')
 end
 FlagInteractions.state.onStash = function()
     TriggerEvent('yourmaps_flags:DelFlag')
@@ -534,17 +581,8 @@ AddEventHandler('yourmaps_flags:client:placeFailed', function()
     propflag = pendingPlace.flag
     propeagle = pendingPlace.eagle
     pendingPlace = nil
-    equipped = false
-    flagout = true
-
-    local text = Config.persistentPlaceFailText
-    if string.upper(Config.framework) == 'VORP' and not Config.nativeText then
-        TriggerEvent('vorp:TipBottom', text, Config.timeDisplay)
-    elseif string.upper(Config.framework) == 'REDEMRP' and not Config.nativeText then
-        TriggerEvent('redem_roleplay:Tip', text, Config.timeDisplay)
-    else
-        displayText(text, Config.timeDisplay)
-    end
+    reattachEquippedFlag()
+    FlagShowMessage(Config.persistentPlaceFailText, nil, 'error')
 end)
 
 CreateThread(function()
