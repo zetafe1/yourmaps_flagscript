@@ -5,6 +5,8 @@ A flag system for **RedM**: equip, drop, pick up and **place** flags in the worl
 **Demo video (gizmo placement + persistence):**  
 https://youtu.be/Ka2wxT5ej3A
 
+![YourMAPS FlagScript - carry and equip flags](https://github.com/user-attachments/assets/df41b58d-4426-4485-aaa7-026e5259950c)
+
 ---
 
 ## What's new
@@ -189,6 +191,8 @@ Items and `prop_map` entries are included in `config.lua` for:
 
 Each pack needs `ensure` in `server.cfg` **before** flagscript and its item SQL.
 
+![YourMAPS FlagScript - flag packs and world placement](https://github.com/user-attachments/assets/31dde33b-d76a-48bb-be80-94f0de7b60df)
+
 ---
 
 ## Included in the free release
@@ -213,6 +217,8 @@ Each pack needs `ensure` in `server.cfg` **before** flagscript and its item SQL.
 3. `restart yourmaps_flagscript`: the flag should remain in place  
 
 See also: https://youtu.be/Ka2wxT5ej3A
+
+![YourMAPS FlagScript - in-game flags](https://github.com/user-attachments/assets/27960af6-3c6b-42e5-9230-5e153ca96f91)
 
 ---
 
