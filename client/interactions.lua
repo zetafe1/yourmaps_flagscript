@@ -76,6 +76,21 @@ function M.usesCustomPlaced()
     return modePlaced() == 'custom'
 end
 
+local function setPromptVisible(name, visible)
+    local p = nativePrompts[name]
+    if not p then return end
+    PromptSetEnabled(p, visible)
+    PromptSetVisible(p, visible)
+    if UiPromptSetEnabled then UiPromptSetEnabled(p, visible) end
+    if UiPromptSetVisible then UiPromptSetVisible(p, visible) end
+end
+
+local function hideAllNativePrompts()
+    for name in pairs(nativePrompts) do
+        setPromptVisible(name, false)
+    end
+end
+
 local function ensureNativePrompts()
     if nativeGroup then return end
     nativeGroup = GetRandomIntInRange(0, 0xffffff)
@@ -92,14 +107,10 @@ local function ensureNativePrompts()
         local p = PromptRegisterBegin()
         PromptSetControlAction(p, M.controlForKey(def.key))
         PromptSetText(p, CreateVarString(10, 'LITERAL_STRING', def.label))
-        PromptSetEnabled(p, true)
-        PromptSetVisible(p, true)
+        PromptSetEnabled(p, false)
+        PromptSetVisible(p, false)
         if holdMs > 0 then
-            if UiPromptSetHoldMode then
-                UiPromptSetHoldMode(p, holdMs)
-            else
-                PromptSetHoldMode(p, holdMs)
-            end
+            PromptSetHoldMode(p, holdMs)
         else
             PromptSetStandardMode(p, true)
         end
@@ -109,20 +120,24 @@ local function ensureNativePrompts()
     end
 end
 
+local function showNativePrompts(activeNames, title)
+    ensureNativePrompts()
+    hideAllNativePrompts()
+    for _, name in ipairs(activeNames) do
+        setPromptVisible(name, true)
+    end
+    local label = CreateVarString(10, 'LITERAL_STRING', title or 'Flag')
+    PromptSetActiveGroupThisFrame(nativeGroup, label)
+end
+
 local function nativeCompleted(promptName)
     local p = nativePrompts[promptName]
-    if not p then return false end
+    if not p or not PromptIsEnabled(p) then return false end
     local holdMs = tonumber(Config.nativePromptHoldMs) or 0
     if holdMs > 0 then
         return PromptHasHoldModeCompleted(p)
     end
     return PromptHasStandardModeCompleted(p, 0)
-end
-
-local function showNativeGroup(title)
-    ensureNativePrompts()
-    local label = CreateVarString(10, 'LITERAL_STRING', title or 'Flag')
-    PromptSetActiveGroupThisFrame(nativeGroup, label)
 end
 
 local function targetId(flagId)
@@ -265,20 +280,20 @@ M.state = {
 function M.init(mainThread)
     CreateThread(function()
         while true do
-            Wait(1)
+            Wait(0)
             local s = M.state
             local equipped = s.equipped
             local flagout = s.flagout
 
-            -- === Equipped: native prompts ===
+            -- === Equipped: native prompts (only place + stash) ===
             if M.usesNativeEquipped() and equipped and flagout then
-                showNativeGroup(Config.nativeEquippedTitle or 'Flag')
+                showNativePrompts({ 'deploy', 'stash' }, Config.nativeEquippedTitle or 'Flag')
                 if nativeCompleted('deploy') then
                     if s.onDeploy then s.onDeploy() end
-                    Wait(400)
+                    Wait(500)
                 elseif nativeCompleted('stash') then
                     if s.onStash then s.onStash() end
-                    Wait(400)
+                    Wait(500)
                 end
 
             -- === Equipped: keys ===
@@ -295,7 +310,7 @@ function M.init(mainThread)
                     keyCooldown = false
                 end
 
-            -- === Placed pickup: native ===
+            -- === Placed pickup: native (only when NOT holding a flag) ===
             elseif M.usesNativePlaced() and not equipped then
                 local nearId = s.nearestPlacedId
                 local nearCoords = s.nearestPlacedCoords
@@ -303,24 +318,26 @@ function M.init(mainThread)
                 local showPlaced = nearId and nearCoords and nearDist and nearDist <= (Config.persistentPickupDist or 2.5)
 
                 if showPlaced and s.persistent then
-                    showNativeGroup(Config.nativePlacedTitle or 'Placed flag')
+                    showNativePrompts({ 'pickupPlaced' }, Config.nativePlacedTitle or 'Placed flag')
                     if nativeCompleted('pickupPlaced') then
                         if s.onPickupPlaced then s.onPickupPlaced(nearId) end
-                        Wait(400)
+                        Wait(500)
                     end
-                elseif flagout and not equipped and not s.persistent and s.prop then
+                elseif flagout and not s.persistent and s.prop then
                     local ped = PlayerPedId()
                     local dist = #(GetEntityCoords(ped) - GetEntityCoords(s.prop))
                     if dist <= (Config.maxPickupDist or 2.0) then
-                        showNativeGroup(Config.nativeTempTitle or 'Flag')
+                        showNativePrompts({ 'pickupTemp' }, Config.nativeTempTitle or 'Flag')
                         if nativeCompleted('pickupTemp') then
                             if s.onPickupTemp then s.onPickupTemp() end
-                            Wait(400)
+                            Wait(500)
                         end
                     else
+                        hideAllNativePrompts()
                         Wait(200)
                     end
                 else
+                    hideAllNativePrompts()
                     Wait(200)
                 end
 
@@ -343,6 +360,7 @@ function M.init(mainThread)
                     Wait(200)
                 end
             else
+                hideAllNativePrompts()
                 Wait(250)
             end
         end
@@ -395,4 +413,5 @@ end)
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     M.clearAllTargets()
+    hideAllNativePrompts()
 end)
