@@ -27,12 +27,12 @@ This system enables players to carry, drop, pick up and **place** flags in an im
 ## Key Features
 
 ### Core
-- **Carry flags in hand** — immersive animations and prop attachments
-- **Drop & pick up** — configurable keybinds or native RedM prompts
-- **Client & server logic** — attachment, distances, item checks, cleanup
-- **Framework integration** — REDEMRP, VORP or custom
-- **Job / item locking** — optional restrictions per flag
-- **Automatic cleanup on respawn** — prevents stuck props
+- **Carry flags in hand** - immersive animations and prop attachments
+- **Drop & pick up** - configurable keybinds or native RedM prompts
+- **Client & server logic** - attachment, distances, item checks, cleanup
+- **Framework integration** - REDEMRP, VORP or custom
+- **Job / item locking** - optional restrictions per flag
+- **Automatic cleanup on respawn** - prevents stuck props
 
 ### New in this version
 
@@ -142,7 +142,7 @@ If you run this script, redistribute it, include it in a server pack, or sell a 
 - **Do not claim the script or included props as your own** — e.g. `prop_flag_ca`, `prop_flag_mx` and the free flag assets are part of this release
 - **Mention the source** in your server credits, Tebex page, Discord or documentation
 
-Open source does not mean anonymous — it means shared. Using free community resources in paid products without attribution hurts the people who maintain and improve them for everyone.
+Open source does not mean anonymous, it means shared. Using free community resources in paid products without attribution hurts the people who maintain and improve them for everyone.
 
 Contributions and improvements are encouraged: fork, PR, or share your changes so others can benefit.
 
