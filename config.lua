@@ -36,15 +36,15 @@ Config.maxPickupDist = 2.0
 -- INTERACTION (how the player interacts with flags)
 -- Ground / placed flag (pick up / persistent):
 --   'drawtext' | 'native' | 'murphy_interact' | 'blkb_interaction' | 'pc_interaction' | 'custom'
-Config.placedInteraction = 'drawtext'
+Config.placedInteraction = 'native'
 -- Equipped flag (place / stash):
 --   'keys' (pickupKey/deleteKey) | 'native' (RedM prompt) | 'drawtext'
-Config.equippedInteraction = 'keys'
+Config.equippedInteraction = 'native'
 -- Resource for murphy_interact / blkb_interaction / pc_interaction
 Config.interactionResource = 'blkb_interaction'
 -- Native RedM prompt (NOT jo_libs) — control hash, e.g. G = 0x760A9C6F
 Config.nativePromptControl = 0x760A9C6F
-Config.nativePromptHoldMs = 0          -- 0 = press; >0 = hold (ms)
+Config.nativePromptHoldMs = 1500        -- hold to complete (ms); 0 = tap
 
 -- TEXT DISPLAY
 Config.textOnUse = true
@@ -136,7 +136,19 @@ Config.items = {
 {name = 'flaggang09', label = 'Gang Flag 09', type = 'gang09', c = 1},
 {name = 'flaggang10', label = 'Gang Flag 10', type = 'gang10', c = 1},
 {name = 'flaggang11', label = 'Gang Flag 11', type = 'gang11', c = 1},
-{name = 'flaggang12', label = 'Gang Flag 12', type = 'gang12', c = 1}
+{name = 'flaggang12', label = 'Gang Flag 12', type = 'gang12', c = 1},
+{name = 'flagblackwood', label = 'House Blackwood Banner', type = 'blackwood', c = 1},
+{name = 'flagironvale', label = 'House Ironvale Banner', type = 'ironvale', c = 1},
+{name = 'flagravenshire', label = 'House Ravenshire Banner', type = 'ravenshire', c = 1},
+{name = 'flaggoldhorn', label = 'House Goldhorn Banner', type = 'goldhorn', c = 1},
+{name = 'flagthornfield', label = 'House Thornfield Banner', type = 'thornfield', c = 1},
+{name = 'flagashborne', label = 'House Ashborne Banner', type = 'ashborne', c = 1},
+{name = 'flagwhitmore', label = 'House Whitmore Banner', type = 'whitmore', c = 1},
+{name = 'flagcrowley', label = 'House Crowley Banner', type = 'crowley', c = 1},
+{name = 'flagredgrave', label = 'House Redgrave Banner', type = 'redgrave', c = 1},
+{name = 'flaglockhart', label = 'House Lockhart Banner', type = 'lockhart', c = 1},
+{name = 'flagsilverfang', label = 'House Silverfang Banner', type = 'silverfang', c = 1},
+{name = 'flagvarmont', label = 'House Varmont Banner', type = 'varmont', c = 1}
     
 }
 
@@ -204,7 +216,19 @@ Config.prop_map = {
     gang09 = 'prop_flag_gang09',
     gang10 = 'prop_flag_gang10',
     gang11 = 'prop_flag_gang11',
-    gang12 = 'prop_flag_gang12'
+    gang12 = 'prop_flag_gang12',
+    blackwood = 'prop_flag_noble01',
+    ironvale = 'prop_flag_noble02',
+    ravenshire = 'prop_flag_noble03',
+    goldhorn = 'prop_flag_noble04',
+    thornfield = 'prop_flag_noble05',
+    ashborne = 'prop_flag_noble06',
+    whitmore = 'prop_flag_noble07',
+    crowley = 'prop_flag_noble08',
+    redgrave = 'prop_flag_noble09',
+    lockhart = 'prop_flag_noble10',
+    silverfang = 'prop_flag_noble11',
+    varmont = 'prop_flag_noble12'
 }
 
 
