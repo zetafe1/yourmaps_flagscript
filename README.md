@@ -1,153 +1,235 @@
 # YourMAPS FlagScript
 
-A flag system for **RedM**, created to fill the gap in available scripts that allow players to equip and interact with flags as in-game items.
+A flag system for **RedM**: equip, drop, pick up and **place** flags in the world with animations, native prompts, database persistence and a built-in **3D gizmo** for precise placement.
 
-This system enables players to carry, drop, pick up and **place** flags in an immersive and configurable way. It supports full integration with item-based frameworks, animations, prompts and optional database persistence.
-
----
-
-## Supported Frameworks
-
-- ✅ **REDEMRP**
-- ✅ **VORP**
-- ✅ **OTHER**
-
-## Includes (free release)
-
-**4 flag props** in `stream/`: Mexico (`prop_flag_mx`), Canada (`prop_flag_ca`), LGBTQ (`prop_flag_lgbtq`), Trans.
-
-**40+ flag items** are preconfigured in `config.lua` and SQL files (national, tribal, in-game state flags, etc.) — props for those flags are **not** included in this free release. Use your own streaming packs or the official YourMAPS flag packs.
-
-**Gang flags** (`flaggang01` … `flaggang12`) are preconfigured in `config.lua` — requires the separate resource `yourmaps_gang_flags`.
+**Demo video (gizmo placement + persistence):**  
+https://youtu.be/Ka2wxT5ej3A
 
 ---
 
-![imagem](https://github.com/user-attachments/assets/df41b58d-4426-4485-aaa7-026e5259950c)
+## What's new
 
-## Key Features
+### Persistence across restarts
 
-### Core
-- **Carry flags in hand** - immersive animations and prop attachments
-- **Drop & pick up** - configurable keybinds or native RedM prompts
-- **Client & server logic** - attachment, distances, item checks, cleanup
-- **Framework integration** - REDEMRP, VORP or custom
-- **Job / item locking** - optional restrictions per flag
-- **Automatic cleanup on respawn** - prevents stuck props
+Placed flags **stay in the world** after a resource or full server restart.
 
-### New in this version
+- Position (`x`, `y`, `z`) and rotation (`heading`) saved to MySQL (`ym_flags_placed`)
+- On join, flags are respawned automatically for all players
+- Configurable per-character limit (`Config.persistentMaxPerPlayer`)
+- Optional owner-only pickup (`Config.persistentOwnerOnly`)
+- Optional consume item on place / return item on pickup
 
-- **Persistent placed flags** — leave flags at camp, base or territory; they survive server restarts (MySQL + `oxmysql`, table `ym_flags_placed`)
-- **Multiple world flags per player** — configurable limit (`Config.persistentMaxPerPlayer`)
-- **Owner-only pickup** — optional; consume item on place, return on pickup
-- **Interaction modes** — separate settings for ground flags vs equipped flag:
-  - `Config.placedInteraction` — `drawtext`, `native`, `murphy_interact`, `blkb_interaction`, `pc_interaction`, `custom`
-  - `Config.equippedInteraction` — `keys`, `native`, `drawtext`
-  - Custom targets: see `client/interactions_custom.example.lua`
-- **Internationalization** — `lang.lua` with `en`, `fr`, `pt`, `es`, `it`; override any string via `Config.Locale`
-- **Gang flag support** — ready for `yourmaps_gang_flags` streaming pack
+### 3D placement gizmo
 
-### Optional YourMAPS flag packs (separate resources)
+Visual placement with a gizmo **built into flagscript**: **no** `jo_libs` or `object_gizmo` required.
 
-These work with this script via `flagscript_config_snippet.lua` in each pack:
-
-| Pack | Theme |
-|------|--------|
-| `yourmaps_gang_flags` | Outlaw / gang banners |
-| `yourmaps_noble_flags` | Heraldic noble houses |
-| `yourmaps_clan_flags` | Occult / witch clans |
-| `yourmaps_cult_flags` | Dark cult / ritual banners |
+- Move and rotate the flag on all three axes (pitch, roll, yaw)
+- Camera locked on the flag; orbit with arrow keys
+- Native RedM prompts (confirm, cancel, snap to ground, camera speed)
+- Player ped blocked during gizmo (no crouch, hands up, movement, etc.)
+- Gizmo strings in `lang.lua` (`en`, `fr`, `pt`, `es`, `it`)
 
 ---
 
-![imagem](https://github.com/user-attachments/assets/31dde33b-d76a-48bb-be80-94f0de7b60df)
+## Supported frameworks
 
-## Installation
+- **VORP**
+- **REDEMRP**
+- **OTHER** (generic identifier fallback)
 
-### 1. Place the resource
+---
 
-Put the folder `yourmaps_flagscript` in your RedM resources directory.
+## Dependencies
 
-### 2. Dependencies
-
-- **oxmysql** — required when `Config.persistentFlags = true` (recommended)
+| Dependency | Required | Purpose |
+|------------|----------|---------|
+| **oxmysql** | Yes (with persistence) | Store placed flags |
+| YourMAPS streaming packs | No | Extra props (gang, noble, clan, cult) |
 
 ```cfg
 ensure oxmysql
+ensure yourmaps_gang_flags      # optional - before flagscript
+ensure yourmaps_noble_flags     # optional
+ensure yourmaps_clan_flags      # optional
+ensure yourmaps_cult_flags      # optional
 ensure yourmaps_flagscript
 ```
 
-If you use optional flag packs, start them **before** the script:
+---
 
-```cfg
-ensure yourmaps_gang_flags
-ensure yourmaps_flagscript
-```
+## Quick installation
 
-### 3. Persistent flags (optional)
+### 1. Resource
 
-1. Run `ym_flags_placed.sql` on your database
-2. In `config.lua`: `Config.persistentFlags = true`
-3. Adjust limits: `persistentMaxPerPlayer`, `persistentOwnerOnly`, `persistentConsumeOnPlace`, etc.
+Place `yourmaps_flagscript` in your resources folder.
 
-### 4. Interaction & language
+### 2. Inventory items
 
-**Interaction** (`config.lua`):
+Run on your database:
 
-- `Config.placedInteraction` — how players interact with flags on the ground
-- `Config.equippedInteraction` — how players place or stash while holding a flag
-- `native` = RedM UiPrompt (not jo_libs)
+- `flag_items_vorp.sql`: VORP
+- `flag_items_redemrp.sql`: REDEMRP
 
-**Language** (`config.lua` + `lang.lua`):
+Optional packs include their own SQL (`yourmaps_*_flags/flag_items_vorp.sql`).
+
+### 3. Persistence (recommended)
+
+1. Run **`ym_flags_placed.sql`** on your database
+2. In `config.lua`:
 
 ```lua
-Config.LocaleLanguage = 'en'  -- en, fr, pt, es, it
-Config.Locale['persistent_place'] = 'Custom text'  -- optional overrides
+Config.persistentFlags = true
+Config.persistentMaxPerPlayer = 15
+Config.persistentOwnerOnly = true
+Config.persistentConsumeOnPlace = true
+Config.persistentReturnItemOnPickup = true
 ```
 
-### 5. Create flag items
+3. Restart the server
 
-This script uses inventory items to spawn flags.
+### 4. Placement gizmo
 
-**You must create the flag items** in your inventory system:
+In `config.lua`:
 
-- Your framework's item registration, **or**
-- Run `flag_items_vorp.sql` or `flag_items_redemrp.sql` on your database
+```lua
+Config.placementMode = true
+Config.placementMaxDist = 3.0          -- flag: max distance from initial position
+Config.placementJoMaxCamDist = 45.0    -- camera: orbit around the flag
+Config.placementJoMoveSpeed = 0.05     -- default camera speed (x0.050)
+Config.placementAllowSnapToGround = true
+```
 
-All usable items are listed in `config.lua` for easy reference.
+### 5. Language & interaction
 
-### 6. Configure
+```lua
+Config.LocaleLanguage = 'en'   -- en, fr, pt, es, it
 
-Open `config.lua` — keybinds, flags, interaction mode, persistence and locale.
+Config.placedInteraction = 'native'    -- ground flag: drawtext | native | blkb_interaction | ...
+Config.equippedInteraction = 'native'    -- equipped: keys | native | drawtext
+```
 
-Restart the server and test, e.g.:
+---
+
+## Persistence: how it works
+
+### Player flow
+
+1. Use the flag item from inventory (equips the flag)
+2. Native prompt: **place flag**
+3. **Gizmo** opens: adjust position and rotation
+4. **Confirm**: flag stays in the world; server writes to the database
+5. Other players see the flag; after restart it remains in place
+6. Owner (if `persistentOwnerOnly`) approaches and **picks up**: item returns to inventory (if configured)
+
+### Table `ym_flags_placed`
+
+| Column | Description |
+|--------|-------------|
+| `char_id` | Owner character (VORP `charIdentifier`) |
+| `flag_type` | Internal type (`american`, `gang01`, `bloodmoon`, ...) |
+| `item_name` | Inventory item name |
+| `x`, `y`, `z` | World position |
+| `heading` | Rotation (yaw) |
+
+### `config.lua` options
+
+| Option | Description |
+|--------|-------------|
+| `persistentFlags` | Enable/disable persistence |
+| `persistentMaxPerPlayer` | Max placed flags per character |
+| `persistentOwnerOnly` | Only owner can pick up |
+| `persistentConsumeOnPlace` | Remove item when placed |
+| `persistentReturnItemOnPickup` | Return item when picked up |
+| `persistentPickupDist` | Distance to pick up |
+| `persistentDisplayDist` | Distance to show prompt |
+
+### Sync
+
+- **Server**: `server/persistence.lua` - insert/delete in DB, sync to all clients
+- **Client**: `client/client.lua` - spawn world flags, pickup, cleanup
+
+---
+
+## Placement gizmo: controls
+
+While the gizmo is active the **player ped is blocked** (movement, crouch, hands up, attack, etc.).
+
+| Action | Key / control |
+|--------|----------------|
+| Move gizmo (axes) | Drag on screen / 3D handles |
+| Toggle move / rotate | `R` (reload) |
+| Confirm | `Enter` |
+| Cancel | Secondary Tab |
+| Snap to ground | `E` (snap Z to ground) |
+| Move camera | Arrow keys (scripted fly) |
+| Camera up / down | Prompt keys |
+| Camera speed | Weapon scroll / prompts |
+
+The camera stays **locked on the flag** (no free-look mode).
+
+### Export for other resources
+
+```lua
+exports.yourmaps_flagscript:IsGizmoActive()  -- true while gizmo is open
+-- or LocalPlayer.state.yourmaps_flagscript_gizmo
+```
+
+---
+
+## YourMAPS flag packs
+
+Items and `prop_map` entries are included in `config.lua` for:
+
+| Pack | Items | Theme |
+|------|-------|--------|
+| `yourmaps_gang_flags` | `flaggang01` ... `flaggang12` | Outlaw / gang banners |
+| `yourmaps_noble_flags` | `flagblackwood` ... `flagvarmont` | Heraldic noble houses |
+| `yourmaps_clan_flags` | `flagbloodmoon` ... `flagcoldcauldron` | Occult / witch clans |
+| `yourmaps_cult_flags` | `flagprofaneeye` ... `flagbloodchalice` | Dark cult / ritual banners |
+
+Each pack needs `ensure` in `server.cfg` **before** flagscript and its item SQL.
+
+---
+
+## Included in the free release
+
+**4 props** in `stream/`: Mexico, Canada, LGBTQ, Trans.
+
+**40+ items** (national, tribal, in-game state flags, etc.) preconfigured in `config.lua`: props for those flags are **not** included in this free release. Use `yourmaps_flags` or your own streaming packs.
+
+---
+
+## In-game test
 
 ```
 /additem canadianflag 1
 /additem flaggang01 1
+/additem flagbloodmoon 1
+/additem flagprofaneeye 1
 ```
 
----
+1. Use the item: equips the flag  
+2. Place with the gizmo: confirm  
+3. `restart yourmaps_flagscript`: the flag should remain in place  
 
-![imagem](https://github.com/user-attachments/assets/27960af6-3c6b-42e5-9230-5e153ca96f91)
-
-## Open Source & Attribution
-
-This script was developed because standalone flag systems for RedM were scarce. It is **fully open-source** — you are welcome to edit, extend and adapt it for your server.
-
-**Please give credit when you use this work.**
-
-If you run this script, redistribute it, include it in a server pack, or sell a product that uses it, we ask that you:
-
-- **Credit YourMAPS / Tafé** (and link to this repository when possible)
-- **Do not claim the script or included props as your own** — e.g. `prop_flag_ca`, `prop_flag_mx` and the free flag assets are part of this release
-- **Mention the source** in your server credits, Tebex page, Discord or documentation
-
-Open source does not mean anonymous, it means shared. Using free community resources in paid products without attribution hurts the people who maintain and improve them for everyone.
-
-Contributions and improvements are encouraged: fork, PR, or share your changes so others can benefit.
+See also: https://youtu.be/Ka2wxT5ej3A
 
 ---
 
-**Tafé — YourMAPS**
+## Open source & attribution
+
+This script is **fully open-source**: you are welcome to edit, extend and adapt it for your server.
+
+**Please give credit when you use this work:**
+
+- **YourMAPS / Tafé** (link to this repository when possible)
+- **Do not claim the script or included props as your own**
+- **Mention the source** in server credits, Tebex page, Discord or documentation
+
+Open source does not mean anonymous: it means shared. Contributions are encouraged: fork, PR, or share your improvements.
+
+---
+
+**Tafé - YourMAPS**
 
 Repository: [github.com/zetafe1/yourmaps_flagscript](https://github.com/zetafe1/yourmaps_flagscript)

@@ -9,6 +9,15 @@ Config.LocaleLanguage = 'en' -- 'en', 'fr', 'pt', 'es', 'it' (see lang.lua)
 Config.Locale = {}
 Config.nativeText = false
 Config.timeDisplay = 5000
+
+-- NOTIFICAÇÕES — cada servidor muda system para o notify que usar
+-- vorp_right | vorp_bottom | jo_libs | redem | custom | none | auto
+Config.Notify = {
+    system = 'vorp_right',
+    durationMs = 5000,
+    -- customClientEvent = 'meu_resource:notify',
+    -- customServerEvent = 'meu_resource:serverNotify',
+}
 Config.disableHorseAnimation = false
 
 -- COMMANDS
@@ -35,16 +44,16 @@ Config.maxPickupDist = 2.0
 
 -- INTERACTION (how the player interacts with flags)
 -- Ground / placed flag (pick up / persistent):
---   'drawtext' | 'native' | 'murphy_interact' | 'blkb_interaction' | 'pc_interaction' | 'custom'
+--   'drawtext' | 'native' | 'murphy_interact' | 'pc_interaction' | 'custom'
 Config.placedInteraction = 'native'
 -- Equipped flag (place / stash):
 --   'keys' (pickupKey/deleteKey) | 'native' (RedM prompt) | 'drawtext'
 Config.equippedInteraction = 'native'
 -- Resource for murphy_interact / blkb_interaction / pc_interaction
-Config.interactionResource = 'blkb_interaction'
+Config.interactionResource = 'pc_interaction'
 -- Native RedM prompt (NOT jo_libs) — control hash, e.g. G = 0x760A9C6F
 Config.nativePromptControl = 0x760A9C6F
-Config.nativePromptHoldMs = 1500        -- hold to complete (ms); 0 = tap
+Config.nativePromptHoldMs = 1000        -- hold to complete (ms); 0 = tap
 
 -- TEXT DISPLAY
 Config.textOnUse = true
@@ -61,6 +70,22 @@ Config.persistentConsumeOnPlace = true      -- remove item from inventory when p
 Config.persistentReturnItemOnPickup = true  -- return item when picked up
 Config.persistentPickupDist = 2.5           -- distance to pick up placed flag
 Config.persistentDisplayDist = 8.0          -- distance to show 3D prompt / target
+
+-- PLACEMENT GIZMO (integrado no flagscript — sem jo_libs / object_gizmo)
+Config.placementMode = true
+Config.placementMaxDist = 3.0
+Config.placementSpawnDist = 1.5
+Config.placementGroundOffsetZ = 0.0
+Config.placementHeadingOffset = 90.0
+Config.placementRotationSnap = 5
+Config.placementJoEnableCam = true
+Config.placementJoMaxCamDist = 45.0          -- câmera orbita à volta da bandeira (sempre focada nela)
+Config.placementJoCamAnchor = 'entity'       -- 'entity' = orbitar bandeira | 'ped' = limite ao ped
+Config.placementJoMoveSpeed = 0.05           -- velocidade câmara por defeito (x0.050)
+Config.placementAllowRotateX = true          -- inclinar (pitch)
+Config.placementAllowRotateY = true          -- inclinar (roll)
+Config.placementAllowRotateZ = true          -- girar (yaw)
+Config.placementAllowSnapToGround = true     -- prompt "colocar no chão"
 
 -- JOB LOCKING
 Config.joblock = false
@@ -148,7 +173,31 @@ Config.items = {
 {name = 'flagredgrave', label = 'House Redgrave Banner', type = 'redgrave', c = 1},
 {name = 'flaglockhart', label = 'House Lockhart Banner', type = 'lockhart', c = 1},
 {name = 'flagsilverfang', label = 'House Silverfang Banner', type = 'silverfang', c = 1},
-{name = 'flagvarmont', label = 'House Varmont Banner', type = 'varmont', c = 1}
+{name = 'flagvarmont', label = 'House Varmont Banner', type = 'varmont', c = 1},
+{name = 'flagprofaneeye', label = 'Profane Eye Banner', type = 'profaneeye', c = 1},
+{name = 'flagblackmoon', label = 'Black Moon Banner', type = 'blackmoon', c = 1},
+{name = 'flagsacrificehand', label = 'Sacrifice Hand Banner', type = 'sacrificehand', c = 1},
+{name = 'flagabysshorns', label = 'Abyss Horns Banner', type = 'abysshorns', c = 1},
+{name = 'flagforbiddencircle', label = 'Forbidden Circle Banner', type = 'forbiddencircle', c = 1},
+{name = 'flagfacelessmask', label = 'Faceless Mask Banner', type = 'facelessmask', c = 1},
+{name = 'flagcorruptedheart', label = 'Corrupted Heart Banner', type = 'corruptedheart', c = 1},
+{name = 'flagritualserpent', label = 'Ritual Serpent Banner', type = 'ritualserpent', c = 1},
+{name = 'flaghangedtree', label = 'Hanged Tree Banner', type = 'hangedtree', c = 1},
+{name = 'flaginvertedstar', label = 'Inverted Star Banner', type = 'invertedstar', c = 1},
+{name = 'flagplagueraven', label = 'Plague Raven Banner', type = 'plagueraven', c = 1},
+{name = 'flagbloodchalice', label = 'Blood Chalice Banner', type = 'bloodchalice', c = 1},
+{name = 'flagbloodmoon', label = 'Blood Moon Banner', type = 'bloodmoon', c = 1},
+{name = 'flagarcaneraven', label = 'Arcane Raven Banner', type = 'arcaneraven', c = 1},
+{name = 'flagrunecircle', label = 'Rune Circle Banner', type = 'runecircle', c = 1},
+{name = 'flagmisteye', label = 'Mist Eye Banner', type = 'misteye', c = 1},
+{name = 'flagkeyskull', label = 'Key & Skull Banner', type = 'keyskull', c = 1},
+{name = 'flaglunarserpent', label = 'Lunar Serpent Banner', type = 'lunarserpent', c = 1},
+{name = 'flagritualhand', label = 'Ritual Hand Banner', type = 'ritualhand', c = 1},
+{name = 'flagdeathtree', label = 'Dead Tree Banner', type = 'deathtree', c = 1},
+{name = 'flagwitchmask', label = 'Witch Mask Banner', type = 'witchmask', c = 1},
+{name = 'flagbrokenstar', label = 'Broken Star Banner', type = 'brokenstar', c = 1},
+{name = 'flagspectralwolf', label = 'Spectral Wolf Banner', type = 'spectralwolf', c = 1},
+{name = 'flagcoldcauldron', label = 'Cold Cauldron Banner', type = 'coldcauldron', c = 1}
     
 }
 
@@ -228,7 +277,31 @@ Config.prop_map = {
     redgrave = 'prop_flag_noble09',
     lockhart = 'prop_flag_noble10',
     silverfang = 'prop_flag_noble11',
-    varmont = 'prop_flag_noble12'
+    varmont = 'prop_flag_noble12',
+    profaneeye = 'prop_flag_cult01',
+    blackmoon = 'prop_flag_cult02',
+    sacrificehand = 'prop_flag_cult03',
+    abysshorns = 'prop_flag_cult04',
+    forbiddencircle = 'prop_flag_cult05',
+    facelessmask = 'prop_flag_cult06',
+    corruptedheart = 'prop_flag_cult07',
+    ritualserpent = 'prop_flag_cult08',
+    hangedtree = 'prop_flag_cult09',
+    invertedstar = 'prop_flag_cult10',
+    plagueraven = 'prop_flag_cult11',
+    bloodchalice = 'prop_flag_cult12',
+    bloodmoon = 'prop_flag_clan01',
+    arcaneraven = 'prop_flag_clan02',
+    runecircle = 'prop_flag_clan03',
+    misteye = 'prop_flag_clan04',
+    keyskull = 'prop_flag_clan05',
+    lunarserpent = 'prop_flag_clan06',
+    ritualhand = 'prop_flag_clan07',
+    deathtree = 'prop_flag_clan08',
+    witchmask = 'prop_flag_clan09',
+    brokenstar = 'prop_flag_clan10',
+    spectralwolf = 'prop_flag_clan11',
+    coldcauldron = 'prop_flag_clan12'
 }
 
 
